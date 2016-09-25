@@ -34,5 +34,6 @@ for a in soup.select('.dl_Category'):
 		print item
 		break
 	time.sleep(1)
+
 	#print "href=", url, "text=", b.get_text()
         #print b['href']
