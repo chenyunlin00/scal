@@ -2,6 +2,7 @@ import urllib2
 import urllib
 import time
 import json
+import pymongo
 from bs4 import BeautifulSoup
 #http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/8761
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/6562")
@@ -9,6 +10,10 @@ from bs4 import BeautifulSoup
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall")
 #print response.read()
 #html = response.read()
+client = pymongo.MongoClient(host="localhost", port=27017)
+db = client.scal_db
+collection = db.scal_collection
+items=db.items
 baseurl='http://ffp.sichuanair.com'
 getlist_url='http://ffp.sichuanair.com/FFPNewWeb/Mall/GetList'
 
@@ -36,8 +41,16 @@ for a in soup.select('.dl_Category'):
         print ajaxRet["Result"]
         print ajaxRet["Message"]
         for item in ajaxRet["ListJSON"]:
-            print "id:%d name:%s qty:%d miles:%d"%(item["RecordID"], item["ProductName"], item["SockQty"], item["RedeemMiles"])
+            findRet = items.find_one({"RecordID": item["RecordID"]})
+            if findRet == None:
+                print "Not found %s"%(item["RecordID"])
+                items.insert(item)
+            else:
+                print "Update %s"%(item["RecordID"])
+                items.update({"RecordID": item["RecordID"]}, item)
+            #print "id:%d name:%s qty:%d miles:%d"%(item["RecordID"], item["ProductName"], item["SockQty"], item["RedeemMiles"])
         time.sleep(1)
 
         #print "href=", url, "text=", b.get_text()
         #print b['href']
+client.close()
