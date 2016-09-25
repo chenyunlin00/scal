@@ -11,7 +11,7 @@ passwd=open("passwd.txt").read()
 
 def sendmail():
     server = smtplib.SMTP("smtp.126.com", 25) # SMTP协议默认端口是25
-    server.login("u_u_u@126.com", passwd) #iuoymxzzntcjbjaf
+    server.login("u_u_u@126.com", passwd) #
     server.sendmail("u_u_u@126.com", ["u_u_u@126.com"], msg.as_string())
     server.quit()
 
