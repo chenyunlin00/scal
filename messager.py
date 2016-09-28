@@ -8,11 +8,12 @@ msg['Subject'] = u'kindel到货通知'
 msg['From'] = "chenyunlin"
 msg['To'] = "chenyunlin"
 passwd=open("passwd.txt").read()
+passwd=passwd.strip()
 
-def sendmail():
+def sendmail(rcv):
     server = smtplib.SMTP("smtp.126.com", 25) # SMTP协议默认端口是25
     server.login("u_u_u@126.com", passwd) #
-    server.sendmail("u_u_u@126.com", ["u_u_u@126.com"], msg.as_string())
+    server.sendmail("u_u_u@126.com", rcv, msg.as_string())
     server.quit()
 
 client = pymongo.MongoClient(host="localhost", port=27017)
@@ -23,9 +24,9 @@ while 1:
     kindle=items.find_one({"ProductName" : "亚马逊全新Kindle Paperwhite电子书阅读器"})
     if kindle != None:
         print kindle["SockQty"]
-        #kindle["SockQty"] = 1
+        kindle["SockQty"] = 1
         if kindle["SockQty"] != 0:
-            sendmail()
+            sendmail(["u_u_u@126.com"])
             break
         time.sleep(1)
 client.close()

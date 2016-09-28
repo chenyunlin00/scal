@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall")
 #print response.read()
 #html = response.read()
+urllib2.socket.setdefaulttimeout(30)
 client = pymongo.MongoClient(host="localhost", port=27017)
 db = client.scal_db
 collection = db.scal_collection
@@ -24,22 +25,33 @@ soup = BeautifulSoup(html, "html.parser")
 for a in soup.select('.dl_Category'):
     for b in a.find_all('a'):
         #print b
-        url=baseurl+b['href']
-        if url != 'http://ffp.sichuanair.com/FFPNewWeb/Mall/List/SM':
+        #a[a.rfind("/")+1:len(a)]
+        category = b['href']
+        if category.rfind("/") == -1:
             continue
-        post_para={'ID':'SM', 'OrderType':'MIL', 'PageIndex':1, 'PageSize':0}
+        category = category[category.rfind("/")+1:len(category)]
+        #print "category=%s"%(category)
+        url=baseurl+b['href']
+        #if url != 'http://ffp.sichuanair.com/FFPNewWeb/Mall/List/SM':
+        #    continue
+        post_para={'ID':category, 'OrderType':'MIL', 'PageIndex':1, 'PageSize':0}
         post_data=urllib.urlencode(post_para)
-        print url
+        #print url
         req=urllib2.Request(getlist_url, post_data)
         req.add_header('Content-Type', "application/x-www-form-urlencoded")
-        response = urllib2.urlopen(req)
-        cate_html=response.read()
+        try:
+            response = urllib2.urlopen(req)
+            cate_html=response.read()
+        except:
+            print "get %s timeout"%(b['href'])
+            continue
         #print cate_html
         #cate_soup=BeautifulSoup(cate_html, "html.parser")   #category page
         #print cate_soup
         ajaxRet=json.loads(cate_html)
-        print ajaxRet["Result"]
-        print ajaxRet["Message"]
+        if ajaxRet["Result"] != True:
+            continue
+        #print ajaxRet["Message"]
         for item in ajaxRet["ListJSON"]:
             findRet = items.find_one({"RecordID": item["RecordID"]})
             if findRet == None:
@@ -48,8 +60,9 @@ for a in soup.select('.dl_Category'):
             else:
                 print "Update %s"%(item["RecordID"])
                 items.update({"RecordID": item["RecordID"]}, item)
-            #print "id:%d name:%s qty:%d miles:%d"%(item["RecordID"], item["ProductName"], item["SockQty"], item["RedeemMiles"])
-        time.sleep(1)
+            print "id:%d name:%s qty:%d miles:%d"%(item["RecordID"], item["ProductName"], item["SockQty"], item["RedeemMiles"])
+        time.sleep(5)
+    time.sleep(5)
 
         #print "href=", url, "text=", b.get_text()
         #print b['href']
