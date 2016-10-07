@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import urllib2
 import urllib
 import time
@@ -51,12 +52,13 @@ for a in soup.select('.dl_Category'):
         ajaxRet=json.loads(cate_html)
         if ajaxRet["Result"] != True:
             continue
+        #print ajaxRet["Result"]
         #print ajaxRet["Message"]
         for item in ajaxRet["ListJSON"]:
             findRet = items.find_one({"RecordID": item["RecordID"]})
             if findRet == None:
                 print "Not found %s"%(item["RecordID"])
-                items.insert(item)
+                items.insert_one(item)
             else:
                 print "Update %s"%(item["RecordID"])
                 items.update({"RecordID": item["RecordID"]}, item)
