@@ -8,8 +8,8 @@ Logger::configure('conf.xml');
 //$auth->CheckSmsYzm('18080401561', '5052');
 class Auth
 {
-    const APP_KEY = '7489ed4a9d00c923b4ff0440980e3e2b';
-    const APP_SECRET = '8ef17bb74f46';
+    const APP_KEY = 'MYKEY';
+    const APP_SECRET = 'MYSEC';
 
     public function log()
     {
