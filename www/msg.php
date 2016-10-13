@@ -1,6 +1,7 @@
 <?php
 
 require_once('log/Logger.php');
+require_once(__DIR__ . '/passwd.php');
 Logger::configure('conf.xml');
 
 //$auth  = new Auth();
@@ -8,8 +9,6 @@ Logger::configure('conf.xml');
 //$auth->CheckSmsYzm('18080401561', '5052');
 class Auth
 {
-    const APP_KEY = '7489ed4a9d00c923b4ff0440980e3e2b';
-    const APP_SECRET = '8ef17bb74f46';
 
     public function log()
     {
@@ -18,8 +17,8 @@ class Auth
     }
 
     public function SendSmsCode($mobile = ""){
-        $appKey = self::APP_KEY;
-        $appSecret = self::APP_SECRET;
+        $appKey = WORK_CONF::APP_KEY;
+        $appSecret = WORK_CONF::SECRET;
         $nonce = '100';
         $curTime = time();
         $checkSum = sha1($appSecret . $nonce . $curTime);
@@ -47,8 +46,8 @@ class Auth
     }
 
     public function CheckSmsYzm($mobile = "",$Code=""){
-        $appKey = self::APP_KEY;
-        $appSecret = self::APP_SECRET;
+        $appKey = WORK_CONF::APP_KEY;
+        $appSecret = WORK_CONF::SECRET;
         $nonce = '100';
         $curTime = time();
         $checkSum = sha1($appSecret . $nonce . $curTime);

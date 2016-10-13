@@ -1,9 +1,10 @@
 <?php
 require_once __DIR__ . "/vendor/autoload.php";
+require_once __DIR__ . "/msg.php";
 date_default_timezone_set('Asia/Shanghai');
 ini_set('display_errors', TRUE);
 define("TOKEN", "MhxzKhl");//自己定义的token 就是个通信的私钥
-include('log/Logger.php');
+require_once('log/Logger.php');
 
 
 Logger::configure('conf.xml');
@@ -55,8 +56,10 @@ class wechatCallbackapiTest
         $users_collection = $db->users;
         $items_collection = $db->items;
         $reglist = $db->reglist;
-        $c = $items_collection->findOne(['RecordID' => $keyword]);
+        $c = $items_collection->findOne(['RecordID' => intval($keyword)]);
+        //$c = $items_collection->find(['RecordID' => intval(6562)]);
         if (empty($c) || !isset($c['SockQty']))
+        if (empty($c))
         {
             return sprintf('订阅失败：未找到该商品 ID=%d', $keyword);
         }
@@ -93,6 +96,7 @@ class wechatCallbackapiTest
         $collection = (new MongoDB\Client)->scal_db->items;
         $c = $collection->find(['ProductName' => ['$regex' => preg_quote($keyword), '$options'=>'i']]);
         //$c = $collection->find(['ProductName' => $keyword]);
+        //$this->log()->trace(var_export($c->toArray(), true));
         $ret = '';
         foreach ($c as $item)
         {
@@ -114,13 +118,22 @@ class wechatCallbackapiTest
         return implode($ret);
     }
 
-    public function sendCode($code, $num)
+    public function sendCode($num)
     {
-
+        $auth = new Auth();
+        $auth_ret = $auth->SendSmsCode($num);
+        if (empty($auth_ret) || !isset($auth_ret['code']) ||
+            $auth_ret['code'] != 200 || 
+            !isset($auth_ret['obj']))
+        {
+            return FALSE;
+        }
+        return $auth_ret['obj'];
     }
 
     public function codeCheck($num)
     {
+        $auth = new Auth();
         $db = (new MongoDB\Client)->scal_db;
         $users = $db->users;
         $c = $users->findOne(['user_name' => $this->m_usrname]);
@@ -128,7 +141,8 @@ class wechatCallbackapiTest
         {
             return '请发送您的手机号，获取验证码';
         }
-        if ($c['reg_code'] == $num)
+        //if ($c['reg_code'] == $num)
+        if ($auth->CheckSmsYzm($c['mobile'], $num))
         {
             $users->updateOne(
                 ['user_name' => $this->m_usrname],
@@ -167,7 +181,11 @@ class wechatCallbackapiTest
         }
         $sndtimes++;
         $users->deleteMany(['user_name' => $this->m_usrname]);
-        $code = $this->getRandStr();
+        $code = $this->sendCode($num);
+        if ($code === FALSE)
+        {
+            return '发送验证码失败，请重新输入手机号';
+        }
         $users->insertOne([
                         'user_name' => $this->m_usrname,
                         'mobile' => $num,
@@ -178,15 +196,14 @@ class wechatCallbackapiTest
                         'send_times' => $sndtimes
                         ]);
 
-        $this->sendCode($code, $num);
-        return sprintf('已发送验证码%d到%d,请收到验证码后将验证码发送给我', $code, $num);
+        return sprintf('已发送验证码到%d,请收到验证码后将验证码发送给我', $num);
     }
 
     public function responseMsg()
     {
         //$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
         $postStr = file_get_contents("php://input");
-        $this->log()->trace($postStr);
+        //$this->log()->trace($postStr);
         if (!empty($postStr)){
             $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
             $this->m_usrname = $postObj->FromUserName;
@@ -205,13 +222,13 @@ class wechatCallbackapiTest
             }
             else if (preg_match("/(dy|订阅)\s*(.*)/i", $keyword, $m))
             {
-                $contentStr = '订阅' . $this->dy($m[2]);
+                $contentStr = '订阅' . $m[2] . $this->dy($m[2]);
             }
             else if (preg_match("/^1(3|4|5|7|8)\d{9}$/", $keyword, $m))
             {
                 $contentStr = '注册手机号' . $this->regMob($m[0]);
             }
-            else if(preg_match('/^\d{6}$/', $keyword, $m))
+            else if(preg_match('/^\d{4}$/', $keyword, $m))
             {
                 $contentStr = '验证码' . $this->codeCheck($m[0]);
             }
