@@ -58,13 +58,13 @@ class ForeverMsssager
                 $user = $users->findOne(['user_name'=> $user_name]);
                 if (empty($user) || empty($user['is_valid']))
                 {
-                    $this->trace("conintue, user {$reg['user_name']} not valid\n");
+                    //$this->trace("conintue, user {$reg['user_name']} not valid\n");
                     continue;
                 }
                 $item = $items->findOne(['RecordID' => $id]);
                 if (empty($item) || $item['SockQty'] == 0)
                 {
-                    $this->trace("conintue, product {$item['ProductName']} qty is zero\n");
+                    //$this->trace("conintue, product {$item['ProductName']} qty is zero\n");
                     continue;
                 }
                 $auth->SendProductInfo($user['mobile'], $item['ServiceClass'], $item['SockQty']);
