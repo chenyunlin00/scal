@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+#coding=utf-8
 # -*- coding: utf-8 -*-
 import urllib2
 import urllib
@@ -5,6 +7,9 @@ import time
 import json
 import pymongo
 from bs4 import BeautifulSoup
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 urllib2.socket.setdefaulttimeout(30)
 
 #http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/8761
