@@ -5,13 +5,14 @@ import time
 import json
 import pymongo
 from bs4 import BeautifulSoup
+urllib2.socket.setdefaulttimeout(30)
+
 #http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/8761
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/6562")
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/8761")
-#response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall")
+response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall")
 #print response.read()
-#html = response.read()
-urllib2.socket.setdefaulttimeout(30)
+html = response.read()
 client = pymongo.MongoClient(host="localhost", port=27017)
 db = client.scal_db
 collection = db.scal_collection
@@ -19,7 +20,7 @@ items=db.items
 baseurl='http://ffp.sichuanair.com'
 getlist_url='http://ffp.sichuanair.com/FFPNewWeb/Mall/GetList'
 
-html = open('index.html').read()
+#html = open('index.html').read()
 #print html
 soup = BeautifulSoup(html, "html.parser")
 #print soup.prettify()
