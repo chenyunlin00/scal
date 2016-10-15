@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . "/vendor/autoload.php";
-require_once __DIR__ . "/msg.php";
+require_once __DIR__ . "/ali_msg.php";
 date_default_timezone_set('Asia/Shanghai');
 ini_set('display_errors', TRUE);
 define("TOKEN", "MhxzKhl");//自己定义的token 就是个通信的私钥
@@ -37,10 +37,6 @@ class wechatCallbackapiTest
 
     }
 
-    public function dft() {
-        echo "雨宝我爱你哦";
-        exit;
-    }
 
     public function dy($keyword)
     {
@@ -56,6 +52,14 @@ class wechatCallbackapiTest
         $users_collection = $db->users;
         $items_collection = $db->items;
         $reglist = $db->reglist;
+        //$this->log()->trace("username " . var_export($this->m_usrname, true));
+        $regCount = $reglist->count(['user_name' => $this->m_usrname]);
+        if ($regCount >= 5)
+        {
+            return '订阅失败:最多订阅5件商品信息，可输入清除订阅来删除所有订阅记录';
+        }
+
+
         $c = $items_collection->findOne(['RecordID' => intval($keyword)]);
         //$c = $items_collection->find(['RecordID' => intval(6562)]);
         if (empty($c) || !isset($c['SockQty']))
@@ -69,7 +73,22 @@ class wechatCallbackapiTest
                 $c['ProductName'], $c['SockQty']);
         }
         $productName = $c['ProductName'];
-        $c = $users_collection->count(['user_name' => $this->m_usrname]);
+        $sname = $c['ServiceClass'];
+        $regCount = $reglist->count(['user_name' => $this->m_usrname, 'RecordID'=>intval($keyword)]);
+        $userCount = $users_collection->count(['user_name' => $this->m_usrname]);
+        if ($regCount > 0)
+        {
+            if ($userCount == 0)
+            {
+                return sprintf('订阅%s成功!请输入您的手机号，我们将在商品到货后提醒您', $productName);
+            }
+            else
+            {
+                return sprintf('订阅%s成功!', $productName);
+            }
+            return '订阅成功';
+        }
+
         $insertOneResult = $reglist->insertOne([
                     'RecordID' => $c['RecordID'],
                     'user_name' => $this->m_usrname
@@ -78,7 +97,7 @@ class wechatCallbackapiTest
         {
             return '订阅失败：内部错误';
         }
-        if ($c == 0)
+        if ($userCount == 0)
         {
             return sprintf('订阅%s成功!请输入您的手机号，我们将在商品到货后提醒您', $productName);
         }
@@ -111,7 +130,7 @@ class wechatCallbackapiTest
     public function getRandStr()
     {
         $ret = [];
-        for ($i=0; $i<6; $i++)
+        for ($i=0; $i<4; $i++)
         {
             $ret[] = rand(0, 9);
         }
@@ -121,14 +140,13 @@ class wechatCallbackapiTest
     public function sendCode($num)
     {
         $auth = new Auth();
-        $auth_ret = $auth->SendSmsCode($num);
-        if (empty($auth_ret) || !isset($auth_ret['code']) ||
-            $auth_ret['code'] != 200 || 
-            !isset($auth_ret['obj']))
+        $code = $this->getRandStr();
+        $auth_ret = $auth->SendSmsCode($num, $code);
+        if ($auth_ret == TRUE)
         {
-            return FALSE;
+            return $code;
         }
-        return $auth_ret['obj'];
+        return FALSE;
     }
 
     public function codeCheck($num)
@@ -141,8 +159,19 @@ class wechatCallbackapiTest
         {
             return '请发送您的手机号，获取验证码';
         }
-        //if ($c['reg_code'] == $num)
-        if ($auth->CheckSmsYzm($c['mobile'], $num))
+        $checktimes = $c['check_code_times'];
+        if ($checktimes > 10)
+        {
+            return sprintf("拒绝验证:验证错误次数太多");
+        }
+        if ($c['is_valid'] == TRUE)
+        {
+            return sprintf("您手机%s已绑定过，不需重复验证，若要解除绑定，请重新输入新手机号",
+                $c['mobile']);
+        }
+        $checktimes++;
+        if ($c['reg_code'] == $num)
+        //if ($auth->CheckSmsYzm($c['mobile'], $num))
         {
             $users->updateOne(
                 ['user_name' => $this->m_usrname],
@@ -152,8 +181,57 @@ class wechatCallbackapiTest
         }
         else
         {
+            $users->updateOne(
+                ['user_name' => $this->m_usrname],
+                ['$set' => ['check_code_times' => $checktimes]]
+                );
+
             return sprintf('验证码错误,绑定手机号失败');
         }
+    }
+
+    public function clearReg()
+    {
+        $db = (new MongoDB\Client)->scal_db;
+        $reglist = $db->reglist;
+        $count = $reglist->count(['user_name' => $this->m_usrname]);
+        $reglist->deleteMany(['user_name' => $this->m_usrname]);
+        $this->log()->trace("clearReg user_name {$this->m_usrname} clear count {$count}");
+        return "已清除{$count}条订阅信息";
+    }
+
+    public function myInfo()
+    {
+        $db = (new MongoDB\Client)->scal_db;
+        $users = $db->users;
+        $user = $users->findOne(['user_name' => $this->m_usrname]);
+        if (empty($user))
+        {
+            return '未查到您的信息';
+        }
+        $ret = sprintf("是否注册成功：%s 绑定手机号 %s", 
+            $user['is_valid']?'是':'否', $user['mobile']);
+        return $ret;
+    }
+
+    public function listReg()
+    {
+        $db = (new MongoDB\Client)->scal_db;
+        $reglist = $db->reglist;
+        $items = $db->items;
+        $regs = $reglist->find(['user_name' => $this->m_usrname]);
+        $ret = "已订阅列表:";
+        foreach ($regs as $reg)
+        {
+            $id = $reg['RecordID'];
+            $item = $items->findOne(['RecordID' => $reg['RecordID']]);
+            if (!empty($item))
+            {
+                $ret .= "\n产品名{$item['ProductName']}";
+            }
+
+        }
+        return $ret;
     }
 
     public function regMob($num)
@@ -163,8 +241,10 @@ class wechatCallbackapiTest
         $users = $db->users;
         $c = $users->findOne(['user_name' => $this->m_usrname]);
         $sndtimes = 0;
+        $checktimes = 0;
         if (!empty($c))
         {
+            $checktimes = $c['check_code_times'];
             if ($c['mobile'] == $num && $c['is_valid'] == TRUE)
             {
                 return '您已使用该手机号注册过,不需再次注册';
@@ -193,10 +273,25 @@ class wechatCallbackapiTest
                         'reg_time' => time(),
                         'reg_code' => $code,
                         'send_code_time' => time(),
-                        'send_times' => $sndtimes
+                        'send_times' => $sndtimes,
+                        'check_code_times' => $checktimes,
                         ]);
 
         return sprintf('已发送验证码到%d,请收到验证码后将验证码发送给我', $num);
+    }
+    public function dft() {
+        return 
+<<<EOF
+欢迎访问飞友资讯，我们提供对川航积分商城的货品到货提醒服务。
+请按下面的例子回复消息给我们，进行相关操作：
+1 回复消息：查询苹果, 可查询名称中包含苹果两个字的产品信息
+2 回复消息：订阅6562, 可订阅ID号为6562的产品，当该产品到货时，我们会通过短信通知您
+3 回复消息：13812345678，绑定您的手机号为13812345678，我们将向该手机发送验证码
+4 回复消息：4363, 这四位数是您收到的验证码
+5 回复消息：清除订阅,取消您订阅的所有商品到货消息
+6 回复消息：查看订阅，查看您已订阅的消息
+7 回复消息：我的信息，查看您的绑定信息
+EOF;
     }
 
     public function responseMsg()
@@ -206,31 +301,43 @@ class wechatCallbackapiTest
         //$this->log()->trace($postStr);
         if (!empty($postStr)){
             $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $this->m_usrname = $postObj->FromUserName;
+            $this->m_usrname = (string)$postObj->FromUserName;
             $toUsername = $postObj->ToUserName;
             $keyword = trim($postObj->Content);
             $time = time();
             $msgType = $postObj->MsgType;
-            if ($msgType != "text")
+
+            $contentStr = $this->dft();
+            if ($msgType == "text")
             {
-                dft();
-            }
-            $contentStr = '你好啊雨宝';
-            if (preg_match("/(cx|查询)\s*(.*)/i", $keyword, $m))
-            {
-                $contentStr = '查询' . $this->cx($m[2]);
-            }
-            else if (preg_match("/(dy|订阅)\s*(.*)/i", $keyword, $m))
-            {
-                $contentStr = '订阅' . $m[2] . $this->dy($m[2]);
-            }
-            else if (preg_match("/^1(3|4|5|7|8)\d{9}$/", $keyword, $m))
-            {
-                $contentStr = '注册手机号' . $this->regMob($m[0]);
-            }
-            else if(preg_match('/^\d{4}$/', $keyword, $m))
-            {
-                $contentStr = '验证码' . $this->codeCheck($m[0]);
+                if (preg_match("/(cx|查询)\s*(.*)/i", $keyword, $m))
+                {
+                    $contentStr = '查询' . $this->cx($m[2]);
+                }
+                else if (preg_match("/^(dy|订阅)\s*(.*)/i", $keyword, $m))
+                {
+                    $contentStr = '订阅' . $m[2] . $this->dy($m[2]);
+                }
+                else if (preg_match("/^1(3|4|5|7|8)\d{9}$/", $keyword, $m))
+                {
+                    $contentStr = '注册手机号' . $this->regMob($m[0]);
+                }
+                else if(preg_match('/^\d{4}$/', $keyword, $m))
+                {
+                    $contentStr = '验证码' . $this->codeCheck($m[0]);
+                }
+                else if (preg_match('/^清除订阅$/', $keyword))
+                {
+                    $contentStr = $this->clearReg();
+                }
+                else if (preg_match('/^查看订阅$/', $keyword))
+                {
+                    $contentStr = $this->listReg();
+                }
+                else if(preg_match('/^我的信息$/', $keyword))
+                {
+                    $contentStr = $this->myInfo();
+                }
             }
                 
                 
