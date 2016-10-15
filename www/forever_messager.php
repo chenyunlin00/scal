@@ -69,7 +69,6 @@ class ForeverMsssager
                 }
                 $auth->SendProductInfo($user['mobile'], $item['ServiceClass'], $item['SockQty']);
                 $reglist->deleteOne(['_id' => $reg['_id']]);
-                exit;
             }
             sleep(5);
         }
