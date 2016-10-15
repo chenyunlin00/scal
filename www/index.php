@@ -177,7 +177,7 @@ class wechatCallbackapiTest
                 ['user_name' => $this->m_usrname],
                 ['$set' => ['is_valid' => TRUE]]
                 );
-            return sprintf('绑定手机号%d成功', $c['mobile']);
+            return sprintf('绑定手机号%s成功', $c['mobile']);
         }
         else
         {
@@ -277,7 +277,7 @@ class wechatCallbackapiTest
                         'check_code_times' => $checktimes,
                         ]);
 
-        return sprintf('已发送验证码到%d,请收到验证码后将验证码发送给我', $num);
+        return sprintf('已发送验证码到%s,请收到验证码后将验证码发送给我', $num);
     }
     public function dft() {
         return 
