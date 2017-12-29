@@ -12,6 +12,8 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 urllib2.socket.setdefaulttimeout(30)
 
+print "now %s" %( time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())) )
+
 #http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/8761
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/6562")
 #response = urllib2.urlopen("http://ffp.sichuanair.com/FFPNewWeb/Mall/Detail/8761")

@@ -51,8 +51,8 @@ class ForeverMsssager
             foreach ($regs as $reg)
             {
                 //'$this->trace("reg =" . var_export($reg, true));
-                $this->trace("reg =" . $reg['_id']);
-                $this->trace("process usr {$reg['user_name']} rid {$reg['RecordID']}\n");
+                #$this->trace("reg =" . $reg['_id']);
+                #$this->trace("process usr {$reg['user_name']} rid {$reg['RecordID']}\n");
                 $id = $reg['RecordID'];
                 $user_name = $reg['user_name'];
                 $user = $users->findOne(['user_name'=> $user_name]);

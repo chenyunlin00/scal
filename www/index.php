@@ -113,16 +113,21 @@ class wechatCallbackapiTest
     {
 
         $collection = (new MongoDB\Client)->scal_db->items;
-        $c = $collection->find(['ProductName' => ['$regex' => preg_quote($keyword), '$options'=>'i']]);
+        $c = $collection->find(['ProductName' => ['$regex' => preg_quote($keyword), '$options'=>'i']], ['limit' => 10]);
         //$c = $collection->find(['ProductName' => $keyword]);
         //$this->log()->trace(var_export($c->toArray(), true));
         $ret = '';
         foreach ($c as $item)
         {
-            $ret .=  sprintf("产品名:%s 库存量:%d ID号:%d\n", 
+            $ret .=  sprintf("【产品名:%s 库存量:%d ID号:%d 需要里程:%d】\n", 
                         $item['ProductName'], $item['SockQty'],
-                        $item['RecordID']);
+                        $item['RecordID'], $item['RedeemMiles']);
         }
+        if (empty($ret))
+        {
+            $ret = '失败，商城里没有此商品';
+        }
+
         return $ret;
     }
 
@@ -284,7 +289,7 @@ class wechatCallbackapiTest
 <<<EOF
 欢迎访问飞友资讯，我们提供对川航积分商城的货品到货提醒服务。
 请按下面的例子回复消息给我们，进行相关操作：
-1 回复消息：查询苹果, 可查询名称中包含苹果两个字的产品信息
+1 回复消息：查询华为, 可查询名称中包含华为两个字的产品信息
 2 回复消息：订阅6562, 可订阅ID号为6562的产品，当该产品到货时，我们会通过短信通知您
 3 回复消息：13812345678，绑定您的手机号为13812345678，我们将向该手机发送验证码
 4 回复消息：4363, 这四位数是您收到的验证码
